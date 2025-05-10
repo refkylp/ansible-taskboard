@@ -1,0 +1,79 @@
+- name: Check if TaskBoard repository exists
+  stat:
+    path: "/home/{{ ansible_user }}/taskboard/.git"
+  register: git_repo
+
+- name: Remove existing TaskBoard directory if not a valid git repo
+  file:
+    path: "/home/{{ ansible_user }}/taskboard"
+    state: absent
+  when: not git_repo.stat.exists  # Eğer .git dizini yoksa, dizini sil
+
+- name: Clone TaskBoard repository
+  git:
+    repo: "https://github.com/firogute/TaskBoard.git"
+    dest: "/home/{{ ansible_user }}/taskboard"
+    version: main
+    update: yes
+    force: yes
+
+- name: Overwrite package.json
+  copy:
+    src: "/home/ec2-user/ans-pro/ansible-taskboard/roles/react/files/package.json"  # Kendi makinendeki package.json
+    dest: "/home/ubuntu/taskboard/package.json"  # Uzak makinedeki hedef
+    owner: ubuntu
+    group: ubuntu
+    mode: '0644'
+
+- name: Ensure src directory exists
+  file:
+    path: /home/{{ ansible_user }}/taskboard/src
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0755'
+
+
+- name: copy index.js to src
+  copy:
+    src: "/home/ubuntu/taskboard/public/index.js"  # Kendi makinendeki package.json
+    dest: "/home/ubuntu/taskboard/src/index.js"  # Uzak makinedeki hedef
+    remote_src: yes
+    owner: ubuntu
+    group: ubuntu
+    mode: '0644'
+
+- name: Wait for the index.js file to be copied
+  wait_for:
+    path: "/home/ubuntu/taskboard/src/index.js"
+    state: present
+    timeout: 90  # Dosyanın kopyalanmasını beklemek için zaman
+
+- name: Install Node.js and npm
+  apt:
+    name: 
+    - nodejs
+    - npm
+    state: present
+    update_cache: yes
+  become: yes
+
+
+- name: Install React dependencies
+  npm:
+    path: /home/{{ ansible_user }}/taskboard
+    state: present
+
+- name: Build React project using shell
+  shell: npm run build
+  args:
+    chdir: /home/{{ ansible_user }}/taskboard
+
+- name: Create React .env file
+  copy:
+    dest: /home/ubuntu/.env
+    content: |
+      REACT_APP_API_URL=http://{{ hostvars[groups['nodejs'][0]].ansible_host }}:3000
+    owner: ubuntu
+    group: ubuntu
+    mode: '0644'

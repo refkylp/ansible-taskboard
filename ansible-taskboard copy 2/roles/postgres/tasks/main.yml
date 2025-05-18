@@ -1,0 +1,56 @@
+- name: Install PostgreSQL server
+  yum:
+    name: postgresql15-server  # veya postgresql16-server (kullandığın versiyona göre değiştir)
+    state: present
+  become: yes
+
+- name: Initialize PostgreSQL database
+  command: /usr/bin/postgresql-setup --initdb
+  args:
+    creates: /var/lib/pgsql/data/PG_VERSION
+  become: yes
+
+- name: Start and enable PostgreSQL service
+  service:
+    name: postgresql
+    state: started
+    enabled: yes
+  become: yes
+
+- name: Install PostgreSQL dependencies
+  yum:
+    name:
+      - python3-psycopg2
+      - postgresql15
+      - postgresql15-devel
+    state: present
+  become: yes
+
+- name: Update pg_hba.conf to allow md5 authentication
+  lineinfile:
+    path: /var/lib/pgsql/data/pg_hba.conf
+    regexp: '^local\s+all\s+all\s+ident'
+    line: 'local   all             all                                     md5'
+  notify: Reload PostgreSQL
+  become: yes
+
+- name: Reload PostgreSQL configuration
+  command: systemctl reload postgresql
+  become: yes
+
+- name: Create PostgreSQL user
+  become: yes
+  become_user: postgres
+  community.postgresql.postgresql_user:
+    state: present
+    name: taskboard_user
+    password: pass1234
+    encrypted: yes
+
+- name: Create PostgreSQL database
+  become: yes
+  become_user: postgres
+  community.postgresql.postgresql_db:
+    state: present
+    name: taskboard_user
+    owner: taskboard_user

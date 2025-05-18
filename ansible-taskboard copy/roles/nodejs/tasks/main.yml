@@ -1,0 +1,11 @@
+---
+- name: Install Node.js
+  shell: curl -sL https://deb.nodesource.com/setup_22.x | bash -
+  become: yes
+
+- name: Install Node.js and npm
+  apt:
+    name: 
+      - nodejs
+    state: present
+  become: yes

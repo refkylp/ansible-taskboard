@@ -1,0 +1,53 @@
+- name: Install PostgreSQL
+  apt:
+    name: postgresql
+    state: present
+  become: yes
+
+- name: Start PostgreSQL service
+  service:
+    name: postgresql
+    state: started
+    enabled: yes
+  become: yes
+
+- name: Install PostgreSQL dependencies
+  apt:
+    name:
+      - python3-psycopg2
+      - libpq-dev
+    state: present
+  become: yes
+
+- name: Update pg_hba.conf to allow md5 authentication
+  lineinfile:
+    path: /etc/postgresql/16/main/pg_hba.conf  # Update the path if needed
+    regexp: '^local\s+all\s+postgres\s+peer'
+    line: 'local   all             postgres                                md5'
+  notify: Reload PostgreSQL
+  become: yes
+
+- name: Reload PostgreSQL configuration
+  command: sudo systemctl reload postgresql
+  become: yes
+
+  
+
+- name: Create PostgreSQL user
+  become: yes
+  become_user: postgres
+  community.postgresql.postgresql_user:
+    state: present
+    name: taskboard_user
+    password: pass1234
+    encrypted: yes
+
+- name: Create PostgreSQL database
+  become: yes
+  become_user: postgres
+  community.postgresql.postgresql_db:
+    state: present
+    name: taskboard_user
+    owner: taskboard_user  # Veritabanının sahibi
+    login_user: taskboard_user  # Veritabanı işlemi için bu kullanıcı kullanılacak
+    login_password: pass1234  # Burada da şifreyi belirtmen gerekiyor

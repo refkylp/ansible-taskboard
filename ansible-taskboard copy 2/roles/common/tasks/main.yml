@@ -1,0 +1,49 @@
+- name: Update and upgrade apt packages 
+  apt:
+    update_cache: yes
+    upgrade: dist
+  when:
+    - "'postgres' not in group_names"
+  tags: apt_upgrade
+
+- name: Update and upgrade yum packages 
+  yum:
+    name: '*'
+    state: latest
+  when:
+    - "'postgres' in group_names"
+  tags: yum_upgrade
+
+
+- name: Install required packages on Ubuntu
+  ansible.builtin.package:
+    name:
+      - git
+      - curl
+      - build-essential
+    state: present
+    update_cache: yes
+  when: ansible_distribution == "Ubuntu"
+
+- name: Install required packages on Amazon Linux
+  yum:
+    name:
+      - git
+      - gcc
+      - make
+    state: present
+  when: ansible_distribution == "Amazon"
+
+- name: Ensure taskboard directory exists
+  file:
+    path: /home/{{ ansible_user }}/taskboard
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0755'
+
+- name: Create environment file
+  template:
+    src: .env.j2
+    dest: /home/{{ ansible_user }}/taskboard/.env
+    mode: '0644'

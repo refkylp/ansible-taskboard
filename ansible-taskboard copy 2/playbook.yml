@@ -1,0 +1,27 @@
+- name: Deploy PostgreSQL
+  hosts: postgres
+  become: yes
+  roles:
+    - common
+    - postgres
+
+- name: Deploy Node.js Backend
+  hosts: nodejs
+  become: yes
+  roles:
+    - common
+    - nodejs
+
+- name: Deploy React Frontend
+  hosts: react
+  become: yes
+  roles:
+    - common
+    - react
+
+- name: Deploy TaskBoard App
+  hosts: taskboard
+  become: yes
+  roles:
+    - common
+    - taskboard

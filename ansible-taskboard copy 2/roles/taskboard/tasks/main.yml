@@ -1,0 +1,51 @@
+- name: Check if TaskBoard repository exists
+  stat:
+    path: "/home/{{ ansible_user }}/taskboard/.git"
+  register: git_repo
+
+- name: Remove existing TaskBoard directory if not a valid git repo
+  file:
+    path: "/home/{{ ansible_user }}/taskboard"
+    state: absent
+  when: not git_repo.stat.exists  # Eğer .git dizini yoksa, dizini sil
+
+- name: Clone TaskBoard repository
+  git:
+    repo: "https://github.com/firogute/TaskBoard.git"
+    dest: "/home/{{ ansible_user }}/taskboard"
+    version: main
+    update: yes
+    force: yes
+
+- name: Install Node.js and npm
+  apt:
+    name: 
+      - nodejs
+      - npm
+    state: present
+  become: yes
+
+- name: Install TaskBoard dependencies
+  npm:
+    path: /home/{{ ansible_user }}/taskboard
+    state: present
+
+- name: Build TaskBoard project
+  npm:
+    path: /home/{{ ansible_user }}/taskboard
+    state: present
+    ignore_scripts: false
+
+- name: Copy systemd service file
+  copy:
+    src: taskboard.service
+    dest: /etc/systemd/system/taskboard.service
+    mode: '0644'
+  become: yes
+
+- name: Start and enable TaskBoard service
+  systemd:
+    name: taskboard
+    state: started
+    enabled: yes
+  become: yes
